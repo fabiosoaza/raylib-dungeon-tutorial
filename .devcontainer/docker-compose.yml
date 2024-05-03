@@ -1,0 +1,12 @@
+services:
+
+  raylib-dungeon-game:
+    build: .
+    volumes:
+            - ../:/opt/app/
+            - ../cmake-build-debug/conan_data:/root/.conan2/
+    ports:
+        - 8080:8080
+  #  command: bash -c ". /root/.profile && conan profile detect && bash"     
+       
+

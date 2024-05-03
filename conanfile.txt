@@ -1,0 +1,12 @@
+[requires]
+glfw/3.3.8
+opengl/system
+xorg/system
+libpng/1.6.43
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[layout]
+cmake_layout
