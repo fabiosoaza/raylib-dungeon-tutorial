@@ -1,7 +1,10 @@
 #include <stdbool.h>
 #include "raylib.h"
 
-#include "base.h"
+#include "../include/game.h"
+#include "../include/scene.h"
+#include "scene_selector.h"
+#include "settings.h"
 #include "default_app.h"
 
 int DefaultAppRun()
@@ -19,6 +22,9 @@ int DefaultAppRun()
     **/
     SetTraceLogLevel(LOG_LEVEL_ENABLE);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+  
+    
+
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, WINDOW_TITLE);
     InitAudioDevice();
@@ -36,6 +42,11 @@ int DefaultAppRun()
     while (!WindowShouldClose()) // Detect window close button or ESC key
     {
         SelectScene(&game, &scene, sceneType);
+        if (scene.pollEvents != NULL)
+        {
+            scene.pollEvents(&game);
+        }
+
         if (scene.updateScene != NULL)
         {
             scene.updateScene(&game, GetFrameTime());

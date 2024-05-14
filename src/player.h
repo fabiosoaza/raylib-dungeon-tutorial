@@ -1,8 +1,8 @@
 #pragma once
-#include "base.h"
+#include <raylib.h>
+#include <stdbool.h>
+#include "../include/actor.h"
 
-GameObject NewPlayer();
-void DrawPlayer(GameObject *player);
-void LoadPlayerTextures(GameObject *player);
-void UnloadPlayerTextures(GameObject *player);
-void UpdatePlayer(GameObject *player, float elapsedTime);
+Actor NewPlayer(Texture2D *tileset, Vector2 position, float scale, bool active, int state);
+void DrawPlayer(Actor *player);
+void UpdatePlayer(Actor *player, float elapsedTime);

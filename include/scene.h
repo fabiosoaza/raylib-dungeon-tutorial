@@ -20,6 +20,7 @@ typedef struct GameScene
     SceneAction initScene;
     SceneActionUpdate updateScene;
     SceneAction drawScene;
+    SceneAction pollEvents;
     SceneAction unloadScene;
     int state;
     bool loaded;

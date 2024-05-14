@@ -1,142 +1,190 @@
 #include "raylib.h"
-#include "base.h"
 #include "player.h"
-#include "tilemap.h"
+#include "json_serialize.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "levelmap.h"
+#include "../include/sprite.h"
+#include "../include/actor.h"
+#include "../include/game.h"
 
-static void PollEvents();
+#include "settings.h"
+
+#if defined(PLATFORM_DESKTOP)
+#define GLSL_VERSION 330
+#else // PLATFORM_ANDROID, PLATFORM_WEB
+#define GLSL_VERSION 100
+#endif
 
 bool PlayerCollidedMap();
 
-static Rectangle oldPlayer;
-
-static Texture2D texTileset;
-static Tilemap tilemap;
-
-static int *tilesetRects;
-static GameObject gamePlayer = {0};
-
 #define TILESET_TILES 32
 
-#define PLAYER_COLLISION_PADDING 12 // Player padding to detect collision with walls
+#define ROWS WORLD_HEIGHT / TILE_SIZE
+#define COLS WORLD_WIDTH / TILE_SIZE
+
+static Actor player = {0};
+
+typedef enum PlayerState
+{
+  PLAYER_IDLE,
+  PLAYER_RUN,
+  PLAYER_JUMP,
+
+  PLAYER_STATE_COUNT
+};
+
+typedef struct Solid
+{
+  Rectangle base;
+  short state;
+  Tile tile;
+
+} Solid;
+
+typedef struct _WorldCell
+{
+  Actor *actor;
+  Solid *solid;
+
+} WorldCell;
+
+typedef struct _World
+{
+  WorldCell cells[WORLD_HEIGHT * WORLD_WIDTH];
+
+} World;
+
+static LevelMap level = {0};
+
+Texture2D playerTexture = {0};
+
+
+
+static void ResetPlayer();
 
 void InitTestScene(Game *game)
 {
 
-  texTileset = LoadTexture("resources/gfx/tileset.png");
+  level = LoadLevelMapFromFile(PATH_LEVEL_MAP);
 
-  int tilesetRectsSize = 0;
-  tilesetRects = LoadIntArrayFromFile("resources/tilemaps/tileset_rectangles.txt", &tilesetRectsSize);
+  LoadLevelMapTextures(&level, PATH_LEVEL_MAP_TEXTURE);
 
-  // LESSON 06: Load tilemap data: tile values (tileset index) and tile colliders
-  tilemap = LoadTilemap("resources/tilemaps/tilemap.txt", "resources/tilemaps/tilemap_colliders.txt");
-
-  tilemap.tileSize = 32;
-  tilemap.position = (Vector2){SCREEN_WIDTH / 2 - tilemap.tileCountX * tilemap.tileSize / 2,
-                               SCREEN_HEIGHT / 2 - tilemap.tileCountY * tilemap.tileSize / 2};
-
-  gamePlayer = NewPlayer();
-  gamePlayer.speed = (Vector2){PLAYER_SPEED_X, PLAYER_SPEED_Y};
-  gamePlayer.base = (Rectangle){tilemap.position.x + 1 * tilemap.tileSize + 8, tilemap.position.y + 1 * tilemap.tileSize + 8, 8, 8};
-  gamePlayer.direction = (Vector2){0, 1};
-  gamePlayer.color = BACKGROUND_COLOR;
-  LoadPlayerTextures(&gamePlayer);
-  
-  
-  oldPlayer = gamePlayer.base;
+  playerTexture = LoadTexture(PATH_SPRITE_TEXTURE);
+  player = NewPlayer(&playerTexture, (Vector2){.x = SCREEN_WIDTH / 2, .y = SCREEN_HEIGHT / 3}, SCALE, true, PLAYER_IDLE);
+  player.sprite.color = BACKGROUND_COLOR;
+  player.sprite.tileset = &playerTexture;
+  player.acceleration.y = GRAVITY;
 }
 
 void UpdateTestScene(Game *game, float elapsedTime)
 {
-  oldPlayer = gamePlayer.base;
 
-  // Atualiza a posição do jogador se não houver colisão
-  PollEvents();
-
-  UpdatePlayer(&gamePlayer, elapsedTime);
-
-  if (PlayerCollidedMap())
-  {
-    gamePlayer.base = oldPlayer;
-  }
+  UpdatePlayer(&player, elapsedTime);
+ // PlayerCollidedMap();
+  // camera.target = (Vector2){sprite.rect.base.x + 20.0f, sprite.rect.base.y + 20.0f};
 }
 
 void DrawTestScene(Game *game)
 {
-  ClearBackground(WHITE);
+  ClearBackground(BACKGROUND_COLOR);
 
-  DrawTilemap(tilemap, texTileset, WHITE, tilesetRects);
+  // BeginMode2D(camera);
 
-  DrawPlayer(&gamePlayer);
+  DrawLevelMapScaled(&level, SCALE);
+  DrawSprite(&player.sprite);
+
+  // EndMode2D();
 }
 
 void UnloadTestScene(Game *game)
 {
-  UnloadPlayerTextures(&gamePlayer);
-  UnloadTilemap(tilemap);
-  UnloadTexture(texTileset);
-  if (tilesetRects != NULL)
-  {
-    free(tilesetRects);
-  }
+
+  UnloadTexture(*(player.sprite.tileset));
+  UnloadLevelMap(&level);
 }
 
-static void PollEvents()
+void PollEventsTestScene(Game *game)
 {
 
   if (IsKeyDown(KEY_UP))
   {
 
-    gamePlayer.direction.y = -1;
+    
   }
   else if (IsKeyDown(KEY_DOWN))
   {
-    gamePlayer.direction.y = 1;
+    
   }
   else if (IsKeyUp(KEY_UP) && IsKeyUp(KEY_DOWN))
   {
-    gamePlayer.direction.y = 0;
+    
   }
 
   if (IsKeyDown(KEY_LEFT))
   {
 
-    gamePlayer.direction.x = -1;
+    player.direction.x = -1;
   }
   else if (IsKeyDown(KEY_RIGHT))
   {
-    gamePlayer.direction.x = 1;
+    player.direction.x = 1;
   }
   else if (IsKeyUp(KEY_LEFT) && IsKeyUp(KEY_RIGHT))
   {
-    gamePlayer.direction.x = 0;
+    player.direction.x = 0;
   }
 
   if (IsKeyPressed(KEY_SPACE))
   {
+    player.speed.y = JUMP_SPEED;
+    player.direction.y = -1;
+    // player.speed.x += player.solidSpeed.x;
+    // player.speed.y += player.solidSpeed.y;
+    // play_sound("jump");
+    player.grounded = false;
+    player.state = PLAYER_JUMP;
   }
 }
 
 bool PlayerCollidedMap()
 {
-
   bool collided = false;
-  for (int y = 0; y < tilemap.tileCountY; y++)
+  if (GetActorRight(player) >= SCREEN_WIDTH)
   {
-    for (int x = 0; x < tilemap.tileCountX; x++)
-    {
-      // TODO: Review player padding for a better collision with walls
-      bool is_tile_collider = tilemap.tiles[y * tilemap.tileCountX + x].collider == 0;
-      Rectangle playerRect = (Rectangle){gamePlayer.base.x + PLAYER_COLLISION_PADDING, gamePlayer.base.y + PLAYER_COLLISION_PADDING, gamePlayer.base.width, gamePlayer.base.height};
-      Rectangle tileRect = (Rectangle){tilemap.position.x + x * tilemap.tileSize + PLAYER_COLLISION_PADDING, tilemap.position.y + y * tilemap.tileSize + PLAYER_COLLISION_PADDING, tilemap.tileSize, tilemap.tileSize};
-      if (is_tile_collider && CheckCollisionRecs(playerRect, tileRect))
-      {
-        return true;
-      }
-    }
+    player.base.x = SCREEN_WIDTH - player.base.width - 1;
+    player.direction.x = 0;
+    collided = true;
   }
-  return false;
+
+  else if (player.base.x <= 0)
+  {
+    player.base.x = 1;
+    player.direction.x = 0;
+    collided = true;
+  }
+
+  if (GetActorBottom(player) >= SCREEN_HEIGHT)
+  {
+    player.base.y = SCREEN_HEIGHT - player.base.height - 1;
+    player.direction.y = 0;
+    collided = true;
+  }
+
+  else if (player.base.y <= 0)
+  {
+    player.base.y = 1;
+    player.direction.y = 0;
+    collided = true;
+  }
+
+  return collided;
+}
+
+static void ResetPlayer()
+{
+  player.speed = (Vector2){PLAYER_SPEED_X, PLAYER_SPEED_Y};
+  player.direction = (Vector2){0, 0};
 }

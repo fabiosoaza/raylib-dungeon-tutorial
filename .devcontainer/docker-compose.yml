@@ -1,6 +1,6 @@
 services:
 
-  raylib-dungeon-game:
+  builder:
     build: .
     volumes:
             - ../:/opt/app/

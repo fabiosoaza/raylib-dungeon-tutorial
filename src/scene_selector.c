@@ -22,6 +22,7 @@ void SelectScene(Game *game, GameScene *scene, SceneType type)
 
             default:
                 scene->initScene = InitTestScene;
+                scene->pollEvents = PollEventsTestScene;
                 scene->updateScene = UpdateTestScene;
                 scene->drawScene = DrawTestScene;
                 scene->unloadScene = UnloadTestScene;

@@ -9,16 +9,9 @@ typedef struct _GameObject
     Vector2 direction;
     bool active;
     short state;
-    Texture2D texture;
-    Color color;
 } GameObject;
 
-
-
-void LoadGameObjectTexture(GameObject *object, char * path);
-void UnLoadGameObjectTexture(GameObject *object);
-void DrawGameObjectTexture(GameObject *object, float rotation);
-
+GameObject NewGameObject();
 Vector2 GetGameObjectPosition(GameObject object);
 bool GameObjectCollided(GameObject obj1, GameObject obj2);
 bool GameObjectCollidedFromTop(GameObject obj1, GameObject obj2);

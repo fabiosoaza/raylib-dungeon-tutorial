@@ -3,6 +3,8 @@ glfw/3.3.8
 opengl/system
 xorg/system
 libpng/1.6.43
+raylib/5.0
+cjson/1.7.17
 
 [generators]
 CMakeDeps
